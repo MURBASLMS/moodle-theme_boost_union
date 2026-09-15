@@ -1386,3 +1386,65 @@ Feature: Configuring the theme_boost_union plugin for the "Course header" sectio
     And the field "Course header layout" matches value "Course title stacked on full surface course header image"
     And the field "Course header height" matches value "250px"
     And the field "Course header canvas border" matches value "Grey border"
+
+  Scenario: Setting: Course header - Restrict which course contact roles are shown as course contacts on a course-by-course basis
+    Given the following "users" exist:
+      | username        | firstname | lastname     |
+      | editingteacher1 | Eddie     | Editingchers |
+      | nonediting1     | Ned       | Nonediting   |
+    And the following "course enrolments" exist:
+      | user            | course | role           |
+      | editingteacher1 | C1     | editingteacher |
+      | nonediting1     | C1     | teacher        |
+    And the following config values are set as admin:
+      | config                                  | value | plugin            |
+      | coursecontact                           | 3,4   |                    |
+      | courseheaderenabled                     | yes   | theme_boost_union |
+      | courseheadershowcontacts                | yes   | theme_boost_union |
+      | courseheadercontactroles_courseoverride | 1     | theme_boost_union |
+    # By default (no course override yet), both configured course contact roles (Teacher and Non-editing teacher)
+    # are shown.
+    When I log in as "admin"
+    And I am on "Course 1" course homepage
+    Then ".coursecontacts .contact" "css_element" should exist
+    And the "title" attribute of ".coursecontacts .contact:nth-of-type(1) img" "css_element" should contain "Eddie Editingchers"
+    And the "title" attribute of ".coursecontacts .contact:nth-of-type(2) img" "css_element" should contain "Ned Nonediting"
+    # Now restrict this course to only show the "Teacher" (editing teacher) role as a course contact.
+    And I navigate to "Settings" in current page administration
+    And I set the field "Course contact roles to show" to "Teacher"
+    And I press "Save and display"
+    Then the "title" attribute of ".coursecontacts .contact:nth-of-type(1) img" "css_element" should contain "Eddie Editingchers"
+    And ".coursecontacts .contact:nth-of-type(2)" "css_element" should not exist
+    # Setting it back to "Use global default" (i.e. an empty selection) shows both roles again.
+    And I navigate to "Settings" in current page administration
+    And I set the field "Course contact roles to show" to ""
+    And I press "Save and display"
+    Then ".coursecontacts .contact:nth-of-type(2)" "css_element" should exist
+    And the "title" attribute of ".coursecontacts .contact:nth-of-type(2) img" "css_element" should contain "Ned Nonediting"
+
+  Scenario: Setting: Course header - The course contact roles field is controlled by its own dedicated capability
+    Given the following config values are set as admin:
+      | config                                   | value | plugin            |
+      | coursecontact                            | 3,4   |                    |
+      | courseheaderenabled                      | yes   | theme_boost_union |
+      | courseheadershowcontacts                 | yes   | theme_boost_union |
+      | courseheaderlayout_courseoverride        | 1     | theme_boost_union |
+      | courseheadercontactroles_courseoverride  | 1     | theme_boost_union |
+    # By default, teacher1 (an editing teacher) already has both the general 'overridecourseheaderincourse'
+    # capability and the dedicated 'overridecoursecontactsincourse' capability (both default to CAP_ALLOW for the
+    # editingteacher archetype), so both fields are shown.
+    When I log in as "teacher1"
+    And I am on "Course 1" course homepage
+    And I click on "Settings" "link"
+    Then "#fitem_id_theme_boost_union_courseheaderlayout" "css_element" should exist
+    And "#fitem_id_theme_boost_union_courseheadercontactroles" "css_element" should exist
+    # Now prevent only the dedicated course contact roles capability for this course. The other course header
+    # settings must remain overridable, but the course contact roles field must disappear, proving that the two
+    # capabilities are properly decoupled.
+    And the following "permission overrides" exist:
+      | capability                                       | permission | role           | contextlevel | reference |
+      | theme/boost_union:overridecoursecontactsincourse | Prevent    | editingteacher | Course       | C1        |
+    And I am on "Course 1" course homepage
+    And I click on "Settings" "link"
+    Then "#fitem_id_theme_boost_union_courseheaderlayout" "css_element" should exist
+    And "#fitem_id_theme_boost_union_courseheadercontactroles" "css_element" should not exist
