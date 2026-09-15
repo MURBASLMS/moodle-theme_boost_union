@@ -3036,10 +3036,16 @@ if ($hassiteconfig || has_capability('theme/boost_union:configure', context_syst
         // settings): The 'global default' behaviour is always to show all of the site's configured course contact
         // roles (i.e. the plain core behaviour), as controlled by $CFG->coursecontact. This setting only controls
         // whether teachers / managers are allowed to further restrict this on course level.
+        // Note: We deliberately use admin_setting_configcheckbox (storing '1' / '0') here, and not a Yes/No
+        // admin_setting_configselect (which would store the 'yes' / 'no' strings used elsewhere in this theme).
+        // All '..._courseoverride' flags (including the ones set via admin_setting_flag / set_courseoverride_flag_options()
+        // on the other course-overridable settings) are checked with plain truthy checks (e.g. "if ($overridesetting)")
+        // throughout coursesettings.php and the course form hooks. Storing 'no' as a non-empty string would be
+        // truthy in PHP and would therefore be (wrongly) treated as "override allowed".
         $name = 'theme_boost_union/courseheadercontactroles_courseoverride';
         $title = get_string('courseheadercontactroles_courseoverride', 'theme_boost_union', null, true);
         $description = get_string('courseheadercontactroles_courseoverride_desc', 'theme_boost_union', null, true);
-        $setting = new admin_setting_configselect($name, $title, $description, THEME_BOOST_UNION_SETTING_SELECT_NO, $yesnooption);
+        $setting = new admin_setting_configcheckbox($name, $title, $description, '0');
         $setting->set_updatedcallback('theme_boost_union_purge_courseoverrides_cache');
         $tab->add($setting);
         $page->hide_if(
