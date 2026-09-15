@@ -768,6 +768,12 @@ $string['courseheaderimageposition_help'] = 'The positioning of the course heade
 // ... ... Setting: Show course contacts in the course header.
 $string['courseheadershowcontacts'] = 'Show course contacts in the course header';
 $string['courseheadershowcontacts_desc'] = 'With this setting, you can enable the display of course contacts in the course header.';
+// ... ... Setting: Allow course contact roles to be restricted on a course-by-course basis.
+$string['courseheadercontactroles_courseoverride'] = 'Allow restricting course contact roles per course';
+$string['courseheadercontactroles_courseoverride_desc'] = 'With this setting, you can allow teachers and managers to restrict, on a course-by-course basis, which of the site\'s configured course contact roles (see Site administration > Users > Permissions > User policies > "Roles that are course contacts") are actually shown as course contacts in a particular course. If disabled, all courses always show all of the site\'s configured course contact roles (the plain Moodle core behaviour).';
+// ... ... Course setting: Course contact roles.
+$string['courseheadercontactroles'] = 'Course contact roles to show';
+$string['courseheadercontactroles_help'] = 'By default, all of the roles which are configured as course contact roles for the whole site are shown as course contacts in this course. If you select one or more roles here, only users holding (at least) one of the selected roles will be shown as course contacts in this course. If you leave this empty, the site-wide default applies.';
 // ... ... Setting: Show course shortname in the course header.
 $string['courseheadershowshortname'] = 'Show course shortname in the course header';
 $string['courseheadershowshortname_desc'] = 'With this setting, you can enable the display of the course shortname in the course header.';
@@ -2186,6 +2192,7 @@ $string['boost_union:editregionoffcanvascenter'] = 'To be able to edit the Off-c
 $string['boost_union:overridecourseheaderincourse'] = 'To be able to override the course header settings in a course';
 $string['boost_union:transfercourseheaderduringimport'] = 'Transfer course header settings during course import';
 $string['boost_union:overridesectionincourse'] = 'To be able to override the section settings in a course';
+$string['boost_union:overridecoursecontactsincourse'] = 'To be able to restrict which course contact roles are shown in a course';
 
 // Caches.
 $string['cachedef_flavours'] = 'Flavours which apply to a given page\'s category ID for the current user';
