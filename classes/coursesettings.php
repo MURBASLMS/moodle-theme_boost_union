@@ -775,6 +775,26 @@ class coursesettings {
     }
 
     /**
+     * Decode the stored 'courseheadercontactroles' value (as returned by get_config_with_course_override()) into an
+     * array of role IDs suitable for \theme_boost_union\util\course::get_course_contacts(), or null if no
+     * restriction is in effect (which is the case for the global default, i.e. 'show all configured contact roles').
+     *
+     * @param mixed $rawvalue The raw config value, e.g. as returned by get_config_with_course_override().
+     * @return array|null Array of role IDs (as integers), or null if no restriction should be applied.
+     */
+    public static function decode_courseheadercontactroles_override($rawvalue) {
+        // An empty value or the 'use global default' sentinel both mean 'no restriction'.
+        if (empty($rawvalue) || $rawvalue == THEME_BOOST_UNION_SETTING_USEGLOBAL) {
+            return null;
+        }
+
+        $roleids = array_filter(array_map('intval', explode(',', $rawvalue)));
+
+        // If, after decoding, nothing is left (e.g. the value was garbage), fall back to 'no restriction' as well.
+        return !empty($roleids) ? array_values($roleids) : null;
+    }
+
+    /**
      * Get the options array for the section 0 appearance setting.
      *
      * @param bool $forcourseform Whether to filter options for course form usage and do not return excluded appearances.

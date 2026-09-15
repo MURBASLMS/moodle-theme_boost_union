@@ -72,9 +72,13 @@ class course {
     /**
      * Returns HTML to display course contacts.
      *
+     * @param array|null $allowedroleids Optional list of role IDs to restrict the returned contacts to. If given, a
+     *                                   contact is only included when at least one of their course contact roles is
+     *                                   contained in this list. If null (the default), no restriction is applied
+     *                                   and all course contacts are returned, matching core's default behaviour.
      * @return array The array of course contacts.
      */
-    public function get_course_contacts() {
+    public function get_course_contacts(?array $allowedroleids = null) {
 
         // Initialize course contacts array.
         $contacts = [];
@@ -86,6 +90,17 @@ class course {
 
             // Iterate over all course contacts.
             foreach ($instructors as $instructor) {
+                // If a role restriction is in effect for this course.
+                if ($allowedroleids !== null) {
+                    // Each contact can hold more than one course contact role (core keys these by role ID in the
+                    // 'roles' array). Only keep this contact if at least one of their roles is allowed here.
+                    $matchedroleids = array_intersect_key($instructor['roles'], array_flip($allowedroleids));
+                    if (empty($matchedroleids)) {
+                        // None of this contact's roles are allowed to be shown in this course - skip them.
+                        continue;
+                    }
+                }
+
                 // Get the user util for this user.
                 $user = $instructor['user'];
                 $userutil = new user($user->id);
