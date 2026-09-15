@@ -66,9 +66,15 @@ class after_form_definition {
         // are only supported by particular course formats.
         $showsectionssettings = has_capability('theme/boost_union:overridesectionincourse', $context) &&
                 coursesettings::is_courseformat_supported_by_sectionfeature($courseformat);
+        // The course contact roles field requires its own dedicated capability (as it controls disclosure of who is
+        // shown as a course contact, not just header styling), must not be excluded for the given course format
+        // (as it is shown as part of the course header settings) and must be allowed by the site admin.
+        $showcoursecontactroles = has_capability('theme/boost_union:overridecoursecontactsincourse', $context) &&
+                !coursesettings::is_courseformat_excluded_from_courseheaderfeature($courseformat) &&
+                get_config('theme_boost_union', 'courseheadercontactroles_courseoverride');
 
         // If the user is not allowed to use any of the sections, we do nothing.
-        if (!$showcourseheadersettings && !$showsectionssettings) {
+        if (!$showcourseheadersettings && !$showsectionssettings && !$showcoursecontactroles) {
             return;
         }
 
@@ -97,6 +103,11 @@ class after_form_definition {
                     break; // We only need to know if at least one is enabled.
                 }
             }
+        }
+        // The course contact roles field also lives in the 'Course header' section, but is gated by its own
+        // capability and override flag (checked further above already), so it can trigger the section on its own.
+        if ($showcoursecontactroles) {
+            $showcourseheader = true;
         }
 
         // Add course header section, if any setting of it can be overridden.
@@ -152,6 +163,46 @@ class after_form_definition {
                             $config['hide_if']['value']
                         );
                     }
+                }
+            }
+
+            // Add the course contact roles field. This is handled separately from the generic loop above because its
+            // options are dynamic (built from the site-wide configured course contact roles, resolved for this
+            // course's context) and because it uses a multi-select element rather than a plain single-value select.
+            if ($showcoursecontactroles) {
+                $contactroleoptions = coursesettings::get_courseheadercontactroles_options($context);
+
+                // Only add the field if there actually are any site-wide course contact roles to choose from.
+                // If none are configured, there is nothing meaningful to restrict here.
+                if (!empty($contactroleoptions)) {
+                    $contactrolesfield = $mform->createElement(
+                        'autocomplete',
+                        'theme_boost_union_courseheadercontactroles',
+                        get_string('courseheadercontactroles', 'theme_boost_union'),
+                        $contactroleoptions,
+                        ['multiple' => true]
+                    );
+                    if ($courseheaderinsertbefore) {
+                        $mform->insertElementBefore($contactrolesfield, $courseheaderinsertbefore);
+                    } else {
+                        $mform->addElement($contactrolesfield);
+                    }
+
+                    $mform->addHelpButton(
+                        'theme_boost_union_courseheadercontactroles',
+                        'courseheadercontactroles',
+                        'theme_boost_union'
+                    );
+
+                    // Hide the field when the course header is disabled for this course, just like the other course
+                    // header settings (if that field is present in this form at all).
+                    $hideifconfig = coursesettings::get_hide_if_with_global_default('courseheaderenabled');
+                    $mform->hideIf(
+                        'theme_boost_union_courseheadercontactroles',
+                        $hideifconfig['element'],
+                        $hideifconfig['condition'],
+                        $hideifconfig['value']
+                    );
                 }
             }
         }

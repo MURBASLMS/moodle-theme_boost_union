@@ -66,9 +66,13 @@ class after_form_definition_after_data {
         // are only supported by particular course formats.
         $showsectionssettings = has_capability('theme/boost_union:overridesectionincourse', $context) &&
                 coursesettings::is_courseformat_supported_by_sectionfeature($courseformat);
+        // The course contact roles field requires its own dedicated capability and must be allowed by the site admin.
+        $showcoursecontactroles = has_capability('theme/boost_union:overridecoursecontactsincourse', $context) &&
+                !coursesettings::is_courseformat_excluded_from_courseheaderfeature($courseformat) &&
+                get_config('theme_boost_union', 'courseheadercontactroles_courseoverride');
 
         // If the user is not allowed to use any of the sections, we do nothing.
-        if (!$showcourseheadersettings && !$showsectionssettings) {
+        if (!$showcourseheadersettings && !$showsectionssettings && !$showcoursecontactroles) {
             return;
         }
 
@@ -116,6 +120,17 @@ class after_form_definition_after_data {
                 }
             }
 
+            // Handle the course contact roles field. This is handled separately from the generic loop above because
+            // its stored value is a comma-separated list of role IDs which needs to be decoded into an array for the
+            // multi-select element (rather than being used as-is like the scalar values of the other settings).
+            if ($showcoursecontactroles) {
+                $storedvalue = $settings['courseheadercontactroles'] ?? '';
+                $selectedroleids = (!empty($storedvalue) && $storedvalue != THEME_BOOST_UNION_SETTING_USEGLOBAL)
+                        ? array_filter(array_map('trim', explode(',', $storedvalue)))
+                        : [];
+                $mform->setDefault('theme_boost_union_courseheadercontactroles', $selectedroleids);
+            }
+
             // Handle course header image file manager if the feature is enabled.
             if ($showcourseheadersettings && coursesettings::courseheaderimage_is_enabled()) {
                 // Create a draft area and copy existing files to it.
@@ -137,6 +152,12 @@ class after_form_definition_after_data {
 
             // If not.
         } else {
+            // Handle the course contact roles field: default to an empty selection (i.e. 'use global default', which
+            // means no restriction) for new courses.
+            if ($showcoursecontactroles) {
+                $mform->setDefault('theme_boost_union_courseheadercontactroles', []);
+            }
+
             // Handle course header image file manager if the feature is enabled.
             if ($showcourseheadersettings && coursesettings::courseheaderimage_is_enabled()) {
                 // For new courses, just prepare an empty draft area.

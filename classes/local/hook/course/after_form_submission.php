@@ -71,9 +71,13 @@ class after_form_submission {
             // are only supported by particular course formats.
             $showsectionssettings = has_capability('theme/boost_union:overridesectionincourse', $context) &&
                     coursesettings::is_courseformat_supported_by_sectionfeature($courseformat);
+            // The course contact roles field requires its own dedicated capability and must be allowed by the site admin.
+            $showcoursecontactroles = has_capability('theme/boost_union:overridecoursecontactsincourse', $context) &&
+                    !coursesettings::is_courseformat_excluded_from_courseheaderfeature($courseformat) &&
+                    get_config('theme_boost_union', 'courseheadercontactroles_courseoverride');
 
             // If the user is not allowed to use any of the sections, we do nothing.
-            if (!$showcourseheadersettings && !$showsectionssettings) {
+            if (!$showcourseheadersettings && !$showsectionssettings && !$showcoursecontactroles) {
                 return;
             }
 
@@ -97,6 +101,13 @@ class after_form_submission {
 
             // Process each setting individually.
             foreach ($coursesettings as $setting) {
+                // The course contact roles field is handled separately below, as its submitted value is an array
+                // (from the multi-select element) which needs to be encoded into a comma-separated string, rather
+                // than being a plain scalar value like the other settings.
+                if ($setting === 'courseheadercontactroles') {
+                    continue;
+                }
+
                 $overridesetting = get_config('theme_boost_union', $setting . '_courseoverride');
                 if ($overridesetting) {
                     $formfieldname = 'theme_boost_union_' . $setting;
@@ -109,6 +120,22 @@ class after_form_submission {
                         // Save the specific override value.
                         coursesettings::set_course_setting($courseid, $setting, $value);
                     }
+                }
+            }
+
+            // Handle the course contact roles field, if it was shown in the form.
+            if ($showcoursecontactroles) {
+                $selectedroleids = $data->theme_boost_union_courseheadercontactroles ?? [];
+
+                // Make sure we only ever store a clean, comma-separated list of integer role IDs.
+                $selectedroleids = array_filter(array_map('intval', (array)$selectedroleids));
+
+                if (empty($selectedroleids)) {
+                    // No roles selected - this means 'use global default' (i.e. no restriction), so delete any
+                    // existing course-specific override.
+                    coursesettings::set_course_setting($courseid, 'courseheadercontactroles', null);
+                } else {
+                    coursesettings::set_course_setting($courseid, 'courseheadercontactroles', implode(',', $selectedroleids));
                 }
             }
 
