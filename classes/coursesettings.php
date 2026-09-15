@@ -325,6 +325,21 @@ class coursesettings {
                 'importtransfercontrolcapa' => 'theme/boost_union:transfercourseheaderduringimport',
                 'restorecontrolledby' => 'theme_boost_union_restore_course_header_settings',
             ],
+            // Note: 'courseheadercontactroles' intentionally has no 'options' key. Its options (the site's configured
+            // course contact roles) are dynamic and depend on the course context, so it is rendered and processed by
+            // dedicated code in the course form hooks instead of the generic select-based settings loop. It is still
+            // registered here (without 'options') so that it is picked up by the generic backup/restore and course
+            // import transfer machinery, which only look at the setting name and the 'restorecontrolledby' /
+            // 'importtransfercontrolledby' keys.
+            'courseheadercontactroles' => [
+                'helpbutton' => true,
+                'formsection' => 'courseheader',
+                'overridecapability' => 'theme/boost_union:overridecoursecontactsincourse',
+                'hide_if' => self::get_hide_if_with_global_default('courseheaderenabled'),
+                'importtransfercontrolledby' => 'courseheaderimporttransfer',
+                'importtransfercontrolcapa' => 'theme/boost_union:transfercourseheaderduringimport',
+                'restorecontrolledby' => 'theme_boost_union_restore_course_header_settings',
+            ],
             'sectionzeroappearance' => [
                 'options' => self::get_options_with_global_default(
                     'sectionzeroappearance',
@@ -689,8 +704,74 @@ class coursesettings {
             }
         }
 
+        // Special handling for courseheadercontactroles setting: The value is a comma-separated list of role IDs.
+        // If the site admin has since removed one of the previously selected roles from the site-wide course contact
+        // roles setting ($CFG->coursecontact), that role ID has to be dropped here so that it can never be used to
+        // (accidentally) widen the effective set of contact roles shown, and to keep the stored value tidy.
+        if ($name === 'courseheadercontactroles') {
+            // If there is nothing to validate, return as-is.
+            if (empty($value) || $value == THEME_BOOST_UNION_SETTING_USEGLOBAL) {
+                return $value;
+            }
+
+            // Determine which role IDs are currently valid, i.e. still configured as course contact roles site-wide.
+            $validroleids = self::get_sitewide_coursecontact_roleids();
+
+            // Filter the stored role IDs down to the currently valid ones.
+            $storedroleids = array_filter(array_map('trim', explode(',', $value)));
+            $filteredroleids = array_intersect($storedroleids, $validroleids);
+
+            // Return the filtered list, re-imploded. If nothing is left, this correctly results in an empty string,
+            // which get_config_with_course_override() and the course util treat as 'no restriction'.
+            return implode(',', $filteredroleids);
+        }
+
         // For all other settings or if validation passes, return the original value.
         return $value;
+    }
+
+    /**
+     * Get the role IDs which are currently configured as course contact roles site-wide.
+     *
+     * This mirrors the roles which core's core_course_list_element::get_course_contacts() would return contacts for,
+     * as configured in Site administration > Users > Permissions > User policies ($CFG->coursecontact).
+     *
+     * @return array Array of role IDs (as integers).
+     */
+    public static function get_sitewide_coursecontact_roleids() {
+        global $CFG;
+
+        if (empty($CFG->coursecontact)) {
+            return [];
+        }
+
+        return array_filter(array_map('intval', explode(',', $CFG->coursecontact)));
+    }
+
+    /**
+     * Get the options array for the course contact roles setting, to be used as a course-level multi-select.
+     *
+     * The options are limited to the roles which are configured as course contact roles site-wide (via
+     * $CFG->coursecontact), as selecting any other role here would have no effect (core would not treat the user as
+     * a course contact in the first place). Role names are resolved for the given context so that course-level role
+     * renames (aliases) are respected.
+     *
+     * @param \context $context The course context to resolve role names for.
+     * @return array Array of roleid => localised role name, or an empty array if no course contact roles are
+     *               configured site-wide.
+     */
+    public static function get_courseheadercontactroles_options(\context $context) {
+        $roleids = self::get_sitewide_coursecontact_roleids();
+
+        if (empty($roleids)) {
+            return [];
+        }
+
+        // Build a plain (non-object) roleid => roleid array so that role_fix_names() fetches the full role records
+        // itself and returns a simple roleid => localname menu.
+        $roleoptions = array_combine($roleids, $roleids);
+
+        return role_fix_names($roleoptions, $context, ROLENAME_ALIAS);
     }
 
     /**

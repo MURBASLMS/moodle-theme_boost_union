@@ -374,4 +374,16 @@ $capabilities = [
             'manager' => CAP_ALLOW,
         ],
     ],
+    // Ability to restrict which of the site's configured course contact roles are shown as course contacts
+    // (e.g. in the course header) for a particular course. This is deliberately a separate capability from
+    // 'overridecourseheaderincourse' as it controls the disclosure of who is shown as a contact, rather than
+    // pure header styling/layout.
+    'theme/boost_union:overridecoursecontactsincourse' => [
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes' => [
+            'editingteacher' => CAP_ALLOW,
+            'manager' => CAP_ALLOW,
+        ],
+    ],
 ];

@@ -3031,6 +3031,24 @@ if ($hassiteconfig || has_capability('theme/boost_union:configure', context_syst
             THEME_BOOST_UNION_SETTING_SELECT_YES
         );
 
+        // Setting: Allow the course contact roles to be restricted on a course-by-course basis.
+        // Note: This does not have a corresponding global 'value' setting (unlike the other course-overridable
+        // settings): The 'global default' behaviour is always to show all of the site's configured course contact
+        // roles (i.e. the plain core behaviour), as controlled by $CFG->coursecontact. This setting only controls
+        // whether teachers / managers are allowed to further restrict this on course level.
+        $name = 'theme_boost_union/courseheadercontactroles_courseoverride';
+        $title = get_string('courseheadercontactroles_courseoverride', 'theme_boost_union', null, true);
+        $description = get_string('courseheadercontactroles_courseoverride_desc', 'theme_boost_union', null, true);
+        $setting = new admin_setting_configselect($name, $title, $description, THEME_BOOST_UNION_SETTING_SELECT_NO, $yesnooption);
+        $setting->set_updatedcallback('theme_boost_union_purge_courseoverrides_cache');
+        $tab->add($setting);
+        $page->hide_if(
+            'theme_boost_union/courseheadercontactroles_courseoverride',
+            'theme_boost_union/courseheadershowcontacts',
+            'neq',
+            THEME_BOOST_UNION_SETTING_SELECT_YES
+        );
+
         // Setting: Show course shortname in the course header.
         $name = 'theme_boost_union/courseheadershowshortname';
         $title = get_string('courseheadershowshortname', 'theme_boost_union', null, true);
