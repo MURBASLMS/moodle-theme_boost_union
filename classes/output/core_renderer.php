@@ -745,7 +745,9 @@ class core_renderer extends core_renderer_intermediate {
 
                     // Amend course contacts, if enabled.
                     if ($header->showcoursecontacts || $header->showcoursepopup) {
-                        $header->contacts = $courseutil->get_course_contacts();
+                        $contactroleoverride = coursesettings::get_config_with_course_override('courseheadercontactroles');
+                        $allowedcontactroleids = coursesettings::decode_courseheadercontactroles_override($contactroleoverride);
+                        $header->contacts = $courseutil->get_course_contacts($allowedcontactroleids);
                         $header->hascontacts = (count($header->contacts) > 0);
                     }
 
